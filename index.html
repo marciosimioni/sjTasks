@@ -19,6 +19,8 @@
     background-color: white;
     padding: 0.5rem;
     margin-bottom: 0.5rem;
+    border: 1px solid #ccc;
+    cursor: move;
   }
   .running {
     background-color: lightblue;
@@ -71,9 +73,41 @@
       return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`;
     }
 
-    function createTask(taskText) {
-      const li = createElement("li", `${taskText} - `, { className: "task" });
+    function generateId() {
+      return Math.random().toString(16).slice(2);
+    }
 
+    function createTask(taskText) {
+      const taskId = generateId();
+      const li = createElement("li", `${taskText} - `, { className: "task", draggable: "true", id: taskId });
+
+      li.addEventListener('dragstart', (e) => {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', e.target.id);
+      });
+
+      li.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+      });
+
+      
+	li.addEventListener('drop', (e) => {
+	  e.preventDefault();
+	  const draggedId = e.dataTransfer.getData('text/plain');
+	  const draggedElement = document.getElementById(draggedId);
+	  const currentIndex = Array.from(taskList.children).indexOf(draggedElement);
+	  const targetIndex = Array.from(taskList.children).indexOf(e.target);
+
+	  if (currentIndex < targetIndex) {
+	    taskList.insertBefore(draggedElement, e.target.nextSibling);
+	  } else {
+	    taskList.insertBefore(draggedElement, e.target);
+	  }
+	});
+
+
+      
       const timerDisplay = createElement("span", "00:00:00");
       li.appendChild(timerDisplay);
 
@@ -87,52 +121,47 @@
       let pauseStartTime = 0;
       let pausesCount = 0;
 
-      const startButton = createElement("button", "Iniciar", {}, { click: () => {
-        if (!startTime) {
-          startTime = new Date();
-        }
-        if (paused) {
-          startTime = new Date(new Date() - elapsedTime * 1000);
-          paused = false;
-          const pauseDuration = Math.floor((new Date() - pauseStartTime) / 1000);
-          breaksList.appendChild(createElement("li", `Pausa: ${compactDateTime(pauseStartTime)} - ${compactDateTime(new Date())} (${formatTime(pauseDuration)})`));
-          pauseStartTime = 0;
-          pausesCount++;
-        }
-        li.classList.remove("paused");
-        li.classList.add("running");
-
+      const startPauseButton = createElement("button", "Iniciar", {}, { click: () => {
         if (!timer) {
+          if (!startTime) {
+            startTime = new Date();
+          }
+          if (paused) {
+            startTime = new Date(new Date() - elapsedTime * 1000);
+            paused = false;
+            const pauseDuration = Math.floor((new Date() - pauseStartTime) / 1000);
+            breaksList.appendChild(createElement("li", `Pausa: ${compactDateTime(pauseStartTime)} - ${compactDateTime(new Date())} (${formatTime(pauseDuration)})`));
+            pauseStartTime = 0;
+            pausesCount++;
+          }
+          li.classList.remove("paused");
+          li.classList.add("running");
+          startPauseButton.textContent = "Pausar";
+
           timer = setInterval(() => {
             elapsedTime = Math.floor((new Date() - startTime) / 1000);
             timerDisplay.textContent = formatTime(elapsedTime);
           }, 1000);
-        }
-      }});
-      li.appendChild(startButton);
-
-      const pauseButton = createElement("button", "Pausar", {}, { click: () => {
-        if (timer) {
+        } else {
           clearInterval(timer);
           timer = null;
           paused = true;
           li.classList.remove("running");
           li.classList.add("paused");
           pauseStartTime = new Date();
+          startPauseButton.textContent = "Iniciar";
         }
       }});
-      li.appendChild(pauseButton);
+      li.appendChild(startPauseButton);
 
       const finishButton = createElement("button", "Finalizar", {}, { click: () => {
         clearInterval(timer);
         timer = null;
         li.classList.remove("running", "paused");
         li.classList.add("completed");
-        startButton.disabled = true;
-        pauseButton.disabled = true;
+        startPauseButton.disabled = true;
         finishButton.disabled = true;
         cancelButton.disabled = true;
-        reactivateButton.disabled = true;
         breaksList.appendChild(createElement("li", `Finalizada: ${compactDateTime(startTime)} - ${compactDateTime(new Date())} (${formatTime(elapsedTime)}, ${pausesCount} pausas)`));
       }});
       li.appendChild(finishButton);
@@ -142,24 +171,11 @@
         timer = null;
         li.classList.remove("running", "paused");
         li.classList.add("cancelled");
-        startButton.disabled = true;
-        pauseButton.disabled = true;
+        startPauseButton.disabled = true;
         finishButton.disabled = true;
         cancelButton.disabled = true;
-        reactivateButton.disabled = false;
       }});
       li.appendChild(cancelButton);
-
-      const reactivateButton = createElement("button", "Reativar", { style: "display: none;" }, { click: () => {
-        li.classList.remove("completed", "cancelled");
-        startButton.disabled = false;
-        pauseButton.disabled = false;
-        finishButton.disabled = false;
-        cancelButton.disabled = false;
-        reactivateButton.style.display = "none";
-        breaksList.appendChild(createElement("li", "Tarefa reativada"));
-      }});
-      li.appendChild(reactivateButton);
 
       const removeButton = createElement("button", "Remover", {}, { click: () => {
         taskList.removeChild(li);
