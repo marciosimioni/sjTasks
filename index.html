@@ -91,23 +91,20 @@
         e.dataTransfer.dropEffect = 'move';
       });
 
-      
-	li.addEventListener('drop', (e) => {
-	  e.preventDefault();
-	  const draggedId = e.dataTransfer.getData('text/plain');
-	  const draggedElement = document.getElementById(draggedId);
-	  const currentIndex = Array.from(taskList.children).indexOf(draggedElement);
-	  const targetIndex = Array.from(taskList.children).indexOf(e.target);
+	    li.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const draggedId = e.dataTransfer.getData('text/plain');
+        const draggedElement = document.getElementById(draggedId);
+        const currentIndex = Array.from(taskList.children).indexOf(draggedElement);
+        const targetIndex = Array.from(taskList.children).indexOf(e.target.closest('li'));
 
-	  if (currentIndex < targetIndex) {
-	    taskList.insertBefore(draggedElement, e.target.nextSibling);
-	  } else {
-	    taskList.insertBefore(draggedElement, e.target);
-	  }
-	});
+        if (currentIndex < targetIndex) {
+          taskList.insertBefore(draggedElement, e.target.closest('li').nextSibling);
+        } else {
+          taskList.insertBefore(draggedElement, e.target.closest('li'));
+        }
+      });
 
-
-      
       const timerDisplay = createElement("span", "00:00:00");
       li.appendChild(timerDisplay);
 
@@ -120,6 +117,7 @@
       let paused = false;
       let pauseStartTime = 0;
       let pausesCount = 0;
+      let totalPausedTime = 0;
 
       const startPauseButton = createElement("button", "Iniciar", {}, { click: () => {
         if (!timer) {
@@ -130,6 +128,7 @@
             startTime = new Date(new Date() - elapsedTime * 1000);
             paused = false;
             const pauseDuration = Math.floor((new Date() - pauseStartTime) / 1000);
+            totalPausedTime += pauseDuration;
             breaksList.appendChild(createElement("li", `Pausa: ${compactDateTime(pauseStartTime)} - ${compactDateTime(new Date())} (${formatTime(pauseDuration)})`));
             pauseStartTime = 0;
             pausesCount++;
@@ -162,7 +161,7 @@
         startPauseButton.disabled = true;
         finishButton.disabled = true;
         cancelButton.disabled = true;
-        breaksList.appendChild(createElement("li", `Finalizada: ${compactDateTime(startTime)} - ${compactDateTime(new Date())} (${formatTime(elapsedTime)}, ${pausesCount} pausas)`));
+        breaksList.appendChild(createElement("li", `Finalizada: ${compactDateTime(startTime)} - ${compactDateTime(new Date())} (${formatTime(elapsedTime)}, ${pausesCount} pausas, tempo total: ${formatTime(elapsedTime + totalPausedTime)}, tempo pausado: ${formatTime(totalPausedTime)})`));
       }});
       li.appendChild(finishButton);
 
@@ -174,6 +173,7 @@
         startPauseButton.disabled = true;
         finishButton.disabled = true;
         cancelButton.disabled = true;
+        breaksList.appendChild(createElement("li", `Cancelada: ${compactDateTime(startTime)} - ${compactDateTime(new Date())} (${formatTime(elapsedTime)}, ${pausesCount} pausas, tempo total: ${formatTime(elapsedTime + totalPausedTime)}, tempo pausado: ${formatTime(totalPausedTime)})`));
       }});
       li.appendChild(cancelButton);
 
